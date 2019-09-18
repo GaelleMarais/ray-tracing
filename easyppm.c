@@ -66,9 +66,18 @@ void easyppm_set(PPM* ppm, int x, int y, ppmcolor c) {
     if (ppm->itype == IMAGETYPE_PBM || ppm->itype == IMAGETYPE_PGM) {
         ppm->image[i] = c.r;
     } else {
-        ppm->image[EASYPPM_NUM_CHANNELS*i + 0] = c.r;
-        ppm->image[EASYPPM_NUM_CHANNELS*i + 1] = c.g;
-        ppm->image[EASYPPM_NUM_CHANNELS*i + 2] = c.b;
+        if(c.r>255)
+            ppm->image[EASYPPM_NUM_CHANNELS*i + 0] = 255;
+        else
+            ppm->image[EASYPPM_NUM_CHANNELS*i + 0] = c.r;
+        if(c.g>255)
+            ppm->image[EASYPPM_NUM_CHANNELS*i + 1] = 255;
+        else
+            ppm->image[EASYPPM_NUM_CHANNELS*i + 1] = c.g;
+        if(c.b>255)
+            ppm->image[EASYPPM_NUM_CHANNELS*i + 2] = 255;
+        else
+            ppm->image[EASYPPM_NUM_CHANNELS*i + 2] = c.b;
     }
 }
 

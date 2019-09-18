@@ -20,7 +20,7 @@ void draw_sphere_ppm(PPM ppm, Sphere s, float red, float green, float blue, Sphe
 
             // creating a light source
             Light light;
-            light.P= {000,200,100};
+            light.P= {300,300,100};
             light.intensity =0.5;
             easyppm_set(&ppm, light.P.y, light.P.x, easyppm_rgb(255,0,0)); // show the light source with a red pixel
 
@@ -64,7 +64,7 @@ void draw_sphere_ppm(PPM ppm, Sphere s, float red, float green, float blue, Sphe
 
                         float n = norm(center_to_surface.D);
                         Vec3<float> normal = {center_to_surface.D.x/n, center_to_surface.D.y/n, center_to_surface.D.z/n};
-                        float intensity = 250 * (1/((dist_to_light*dist_to_light))*(dot(normal,sphere_to_light.D)));
+                        float intensity = 150 * (1/((dist_to_light*dist_to_light))*(dot(normal,sphere_to_light.D)));
 
                         // DEBUG
                         // printf("Distance to light : %f        Intensity: %f \n", dist, intensity);
@@ -90,18 +90,30 @@ int main(int argc, char* argv[])
     printf("Writing %s ... ", filename);
 
     Sphere s1;
-    s1.C = {400,300,300};
-    s1.R = 150;
+    s1.C = {150,150,300};
+    s1.R = 100;
     spheres[0]=s1;
 
     Sphere s2;
-    s2.C = {200,450,400};
-    s2.R = 50;
+    s2.C = {400,400,400};
+    s2.R = 100;
     spheres[1]=s2;
 
+    Sphere s3;
+    s3.C = {50,600,300};
+    s3.R = 200;
+    spheres[2]=s3;
+
+    Sphere s4;
+    s4.C = {480,480,200};
+    s4.R = 50;
+    spheres[3]=s4;
+
     PPM ppm = easyppm_create(nb_col, nb_line, IMAGETYPE_PPM);
-    draw_sphere_ppm(ppm,s2,0,1,1,spheres,2);
-    draw_sphere_ppm(ppm,s1,1,1,0,spheres,2);
+    draw_sphere_ppm(ppm,s4,1,0.3,0.3,spheres,4);
+    draw_sphere_ppm(ppm,s3,0,1,1,spheres,4);
+    draw_sphere_ppm(ppm,s2,1,1,0,spheres,4);
+    draw_sphere_ppm(ppm,s1,0.2,1,0.2,spheres,4);
 
     easyppm_write(&ppm, filename);
     printf("OK\n");

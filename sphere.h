@@ -3,6 +3,7 @@
 struct Sphere{
     Vec3<float> C; //center
     int R;  //radius
+    Vec3<float> color;
 };
 
 bool operator==(Sphere a, Sphere b){

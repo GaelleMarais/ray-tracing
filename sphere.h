@@ -32,13 +32,26 @@ float intersection(Ray ray, Sphere sphere){
         else if (s2>0)
             solution = s2;
         else 
-            return 0;
+            return -1;
     }else{
-        return 0;
+        return -1;
     }
     //DEBUG
     //printf("%f", solution);
     return solution;
+}
+
+float nearest_intersection(Ray ray, Sphere spheres[], int nb_sphere, Sphere &sphere){
+    float min_f = -1;
+    for (int i=0; i<nb_sphere; i++){
+        Sphere s = spheres[i];
+        float f = intersection(ray, s);
+        if (f > 0 && (min_f == -1 || f < min_f)){
+            sphere=s;
+            min_f=f;
+        }
+    }
+    return min_f;
 }
 
 float intersection_max(Ray ray, Sphere sphere){

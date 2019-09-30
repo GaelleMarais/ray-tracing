@@ -1,142 +1,145 @@
-#pragma omp parallel for
+#include <omp.h>
 #include <stdio.h>
 #include <math.h>
 #include "ray.h"
 #include "sphere.h"
 #include "cube.h"
 #include "vec3.h"
+#include "light.h"
 #include "easyppm.h"
 #include "easyppm.c"
+#include <iostream>
 
-int INTENS = 300;
+int image_width = 600;
+int image_height = 600;
+int INTENS = 1e5;
+int samples = 100;
+
+float clamp(float min, float max, float value)
+{
+    if (value < min) return min;
+    if (value > max) return max;
+    return value;
+}
+
+//t e [0; 1]
+float lerp(float start, float end, float t)
+{
+    return start + t * (end - start);
+}
+
+Vec3<float> get_point_light_illumination(const Light& light, const Vec3<float> hit_point, const Vec3<float>& normal, Sphere spheres[], int nb_spheres)
+{
+    Vec3<float> color = {0, 0, 0};
+    // Compute point light color
+
+    Ray sphere_to_light;
+    sphere_to_light.P = hit_point + 0.1f * normal; // move away from surface to avoid dead pixels
+    sphere_to_light.D = normalise(light.position - hit_point);
+
+    float dist_to_light = norm(light.position - hit_point);
+
+    Sphere obstacle;
+    // int obs = 0;
+    float f_obstacle = nearest_intersection(sphere_to_light, spheres, nb_spheres, obstacle);
+
+    if (f_obstacle == -1 || f_obstacle >= dist_to_light){
+        // sphere is in light
+        float angle = dot(sphere_to_light.D, normal);
+        float intensity = light.intensity * angle / (dist_to_light * dist_to_light);
+        if (intensity < 0) intensity = 0;
+        color = intensity * light.color;
+    }
+
+    return color;
+}
 
 void draw_sphere_ppm(PPM ppm, Sphere s, Sphere spheres[], int nb_spheres){
-    int i,j;
-    
-    for(i=0; i<ppm.height;i++){
-        for(j=0; j<ppm.width;j++){
+
+    CubeLight cube_light;
+    cube_light.color = {1, 1, 1};
+    cube_light.intensity = INTENS;
+    cube_light.position = {300, 600, 300};
+    cube_light.size = 100;
+
+    #pragma omp parallel for    
+    for(int i = 0; i < ppm.width; i++){
+        for(int j = 0; j < ppm.height; j++){
 
             Ray r;
             r.P = {(float)i,(float)j,0};
             r.D = {0,0,1};
 
-            // creating a cube light source
-            Cube light;
-            light.P = {500,200,100};
-            light.size = 100;
-
-            // show the cube light source with a red pixel
-            easyppm_set(&ppm, light.P.y, light.P.x, easyppm_rgb(255,0,0)); 
-            easyppm_set(&ppm, light.P.y+light.size, light.P.x, easyppm_rgb(255,0,0));
-            easyppm_set(&ppm, light.P.y+light.size, light.P.x+light.size, easyppm_rgb(255,0,0));
-            easyppm_set(&ppm, light.P.y, light.P.x+light.size, easyppm_rgb(255,0,0)); 
-
             float f = intersection(r,s);             
 
             if(f>0){ // case where the sphere is in the screen
+
+                Vec3<float> hit_point = r.P + f * r.D;
+                Vec3<float> normal = normalise(hit_point - s.C);
+                Vec3<float> illumination = {0, 0, 0};
                 
-                int l;
-                for(int l=0;l<50;l++){
-                    Vec3<float> lightPoint= randomPoint(light);
-                    easyppm_set(&ppm, lightPoint.y, lightPoint.x, easyppm_rgb(255,255,255)); 
+                //Can abstract to multiple cube_lights easily now ! :)
+                Vec3<float> cube_light_illumination = {0, 0, 0};
 
-                    Vec3<float> X = {r.P.x+f*r.D.x,r.P.y+f*r.D.y,r.P.z+f*r.D.z}; // coordinates for the point on the surface
-                    Ray sphere_to_light; // ray from the surface to the light source
-                    sphere_to_light.P = X;
-                    sphere_to_light.D = {(lightPoint.x -X.x), (lightPoint.y -X.y),(lightPoint.z -X.z)};
+                std::random_device random_device;
+                std::mt19937_64 random(random_device());
 
-                    //easyppm_set(&ppm, j, i, easyppm_rgb(red,green,blue));
-
-                    int k;
-                    Sphere obstacle;
-                    int obs = 0;
-                    
-                    for (k=0; k<nb_spheres;k++){
-                        Sphere s2 = spheres[k];
-
-
-                        float f2 = intersection(sphere_to_light, s2);
-
-                        Vec3<float> O = {sphere_to_light.P.x+f2*sphere_to_light.D.x,
-                                        sphere_to_light.P.y+f2*sphere_to_light.D.y,
-                                        sphere_to_light.P.z+f2*sphere_to_light.D.z}; // coordinates for the point on the obstacle
-                        Vec3<float> d = {(O.x -X.x), (O.y -X.y),(O.z -X.z)};
-                        
-
-                         if (f2==0){ //case where no object is obstructing the light
-
-                            float dist_to_light = norm(sphere_to_light.D);  
-
-                            Ray center_to_surface;
-                            center_to_surface.P = s.C;
-                            center_to_surface.D = {X.x -s.C.x, X.y -s.C.y, X.z -s.C.z};
-
-                            float n = norm(center_to_surface.D);
-                            Vec3<float> normal = {center_to_surface.D.x/n, center_to_surface.D.y/n, center_to_surface.D.z/n};
-                            float intensity = INTENS * (1/((dist_to_light*dist_to_light))*(abs(dot(normal,sphere_to_light.D))));
-
-                            // DEBUG
-                            // printf("Distance to light : %f        Intensity: %f \n", dist, intensity);
-
-                            // with 3d effect using depth between the sphere and the light
-                            easyppm_set(&ppm, j, i, easyppm_rgb(intensity*s.color.x*255,intensity*s.color.y*255,intensity*s.color.z*255));  
-
-                        }else{
-                            // DEBUG
-                            // easyppm_set(&ppm, j, i, easyppm_rgb(50,50,50));
-                        }                                                                                                                           
-                    } 
-                    if(obs==0){
-                        // float dist_to_light = norm(sphere_to_light.D);                            
-
-                        // Ray center_to_surface;
-                        // center_to_surface.P = s.C;
-                        // center_to_surface.D = {X.x -s.C.x, X.y -s.C.y, X.z -s.C.z};
-
-                        // float n = norm(center_to_surface.D);
-                        // Vec3<float> normal = {center_to_surface.D.x/n, center_to_surface.D.y/n, center_to_surface.D.z/n};
-                        // float intensity = INTENS * (1/((dist_to_light*dist_to_light))*(abs(dot(normal,sphere_to_light.D))));
-
-                        // // DEBUG
-                        // // printf("Distance to light : %f        Intensity: %f \n", dist, intensity);
-
-                        // // with 3d effect using depth between the sphere and the light
-                        // easyppm_set(&ppm, j, i, easyppm_rgb(intensity*s.color.x*255,intensity*s.color.y*255,intensity*s.color.z*255));            
-                    }                   
+                //Surface light illumination computing
+                for (int l = 0; l < samples; l++)
+                {
+                    Light light_point = cube_light.new_random_point_light(random, samples);
+                    cube_light_illumination = cube_light_illumination + get_point_light_illumination(light_point, hit_point, normal, spheres, nb_spheres);
                 }
-            }                    
+                illumination = illumination + cube_light_illumination;
+
+                //Convert to RGB ranges
+                Vec3<float> color = s.color * illumination;
+                //Normalize by clamping to [0;1] domain
+                color.x = clamp(0, 1, color.x);
+                color.y = clamp(0, 1, color.y);
+                color.z = clamp(0, 1, color.z);
+                //Apply the weird shit (gamma correction)
+                color.x = std::pow(color.x, 1/2.2f);
+                color.y = std::pow(color.y, 1/2.2f);
+                color.z = std::pow(color.z, 1/2.2f);
+                //Map to [0;255]
+                color.x = lerp(0, 255, color.x);
+                color.y = lerp(0, 255, color.y);
+                color.z = lerp(0, 255, color.z);
+                //Write to framebuffer
+                easyppm_set(&ppm, i, j, easyppm_rgb(color.x, color.y, color.z));
+            }
         }
     }
 }
+
 
 
 int main(int argc, char* argv[])
 {
     char filename[250];
     Sphere spheres[10];
-    int nb_col=600;
-    int nb_line=600;
 
     sscanf("imgs/light.ppm","%s", filename);
     printf("Writing %s ... ", filename);
 
     // VERT
     Sphere s1;
-    s1.C = {250,150,600};
+    s1.C = {150, 250, 600};
     s1.R = 80;
     s1.color={0,1,1};
     spheres[0]=s1;
 
     // JAUNE
     Sphere s2;
-    s2.C = {300,400,600};
+    s2.C = {400, 300, 600};
     s2.R = 70;
     s2.color={1,1,0};
     spheres[1]=s2;
 
     // ROUGE
     Sphere s3;
-    s3.C = {50,300,900};
+    s3.C = {300, 50, 900};
     s3.R = 300;
     s3.color={1,0,0};
     spheres[2]=s3;
@@ -144,7 +147,7 @@ int main(int argc, char* argv[])
 
     int nb_sphere=3;
 
-    PPM ppm = easyppm_create(nb_col, nb_line, IMAGETYPE_PPM);
+    PPM ppm = easyppm_create(image_width, image_height, IMAGETYPE_PPM);
 
     draw_sphere_ppm(ppm,s3,spheres,nb_sphere);
     draw_sphere_ppm(ppm,s2,spheres,nb_sphere);

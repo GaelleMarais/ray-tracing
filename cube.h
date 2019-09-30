@@ -1,17 +1,27 @@
+#pragma once
 #include "vec3.h"
+#include "light.h"
+#include <random>
 
-struct Cube{
-    Vec3<float> P;
+struct CubeLight{
+    Vec3<float> position;
     float size;
+    float intensity;
+    Vec3<float> color;
+
+    Light new_random_point_light(std::mt19937_64& random, int sample_count)
+    {
+        Light light;
+        light.intensity = intensity / (float) sample_count;
+        light.color = color;
+
+        float delta = size/2;
+        std::uniform_real_distribution<> dist(-delta, +delta);
+        light.position.x = dist(random);
+        light.position.y = dist(random);
+        light.position.z = dist(random);
+        light.position = light.position + position;
+
+        return light;
+    }
 };
-
-Vec3<float> randomPoint(Cube cube){
-    float randx =  (static_cast <float> (rand()) / static_cast <float> (RAND_MAX))*cube.size + cube.P.x;
-    float randy =  (static_cast <float> (rand()) / static_cast <float> (RAND_MAX))*cube.size + cube.P.y;
-    float randz =  (static_cast <float> (rand()) / static_cast <float> (RAND_MAX))*cube.size + cube.P.z;
-
-    Vec3<float> vec = {randx,randy,randz};
-    // DEBUG
-    // printf("randx : %f     randy : %f     randz : %f\n", randx, randy, randz);
-    return vec;
-}

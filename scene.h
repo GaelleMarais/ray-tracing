@@ -1,6 +1,7 @@
 #pragma once 
 #include "vec3.h"
 #include "light.h"
+#include "camera.h"
 #include "sphere.h"
 
 struct Scene{
@@ -8,5 +9,5 @@ struct Scene{
     Sphere spheres[10];
     int nb_lights;
     LightCube light_cubes[10];
-    Vec3<float> camera;
+    CameraCube camera_cube;
 };

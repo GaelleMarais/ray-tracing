@@ -7,25 +7,26 @@
 #include "vec3.h"
 #include "light.h"
 #include "scene.h"
+#include "camera.h"
 #include "easyppm.h"
 #include "easyppm.c"
 #include <iostream>
 
 int image_width = 600;
 int image_height = 600;
-int light_intensity = 1e5;
-int samples = 100;
+int light_intensity = 5e4;
+int light_samples = 500;
+int camera_samples = 100;
+
 Scene scene;
 
-float clamp(float min, float max, float value)
-{
+float clamp(float min, float max, float value){
     if (value < min) return min;
     if (value > max) return max;
     return value;
 }
 
-float lerp(float start, float end, float t)
-{
+float lerp(float start, float end, float t){
     return start + t * (end - start);
 }
 
@@ -60,6 +61,47 @@ Ray get_ray(const Vec3<float> pixel, const Vec3<float> camera){
     return ray;
 }
 
+Vec3<float> trace_ray(const Vec3<float> hit_point, Vec3<float> normal, Sphere s){
+    Vec3<float> illumination = {0, 0, 0};                
+    Vec3<float> light_cube_illumination = {0, 0, 0};
+
+    std::random_device random_device;
+    std::mt19937_64 random(random_device());
+
+    // For each cube_light in the scene
+    for(int cl = 0; cl < scene.nb_lights; cl++){
+
+    LightCube light_cube = scene.light_cubes[cl];
+        // For severals light_point in the light_cube
+        for (int l = 0; l < light_samples; l++)
+        {
+            Light light_point = light_cube.new_random_point_light(random, light_samples);
+            light_cube_illumination = light_cube_illumination + get_point_light_illumination(light_point, hit_point, normal, scene);
+        }
+        illumination = illumination + light_cube_illumination;
+
+    }
+
+
+    //Convert to RGB ranges
+    Vec3<float> color = s.color * illumination;
+    //Normalize by clamping to [0;1] domain
+    color.x = clamp(0, 1, color.x);
+    color.y = clamp(0, 1, color.y);
+    color.z = clamp(0, 1, color.z);
+    //Apply the weird shit (gamma correction)
+    color.x = std::pow(color.x, 1/2.2f);
+    color.y = std::pow(color.y, 1/2.2f);
+    color.z = std::pow(color.z, 1/2.2f);
+    //Map to [0;255]
+    color.x = lerp(0, 255, color.x);
+    color.y = lerp(0, 255, color.y);
+    color.z = lerp(0, 255, color.z);
+
+    return color;
+
+}
+
 void draw_scene_ppm(PPM ppm, Scene scene){
 
     #pragma omp parallel for    
@@ -67,54 +109,55 @@ void draw_scene_ppm(PPM ppm, Scene scene){
         for(int j = 0; j < ppm.height; j++){
 
             Vec3<float> pixel = {(float)i, (float)j, 0};
-            Ray r = get_ray(pixel, scene.camera);
 
-            Sphere s;
-            float f = nearest_intersection(r, scene.spheres, scene.nb_spheres, s);  
+            Vec3<float> total_color = {0, 0, 0};
 
-            if(f>0){ // case where the sphere is in the screen
-
-                Vec3<float> hit_point = r.P + f * r.D;
-                Vec3<float> normal = normalise(hit_point - s.C);
-                Vec3<float> illumination = {0, 0, 0};
-                
-                Vec3<float> light_cube_illumination = {0, 0, 0};
+            for(int c=0; c < camera_samples; c++){
 
                 std::random_device random_device;
                 std::mt19937_64 random(random_device());
 
-                // For each cube_light in the scene
-                for(int cl = 0; cl < scene.nb_lights; cl++){
+                Vec3<float> camera_point =  scene.camera_cube.new_random_point();
+                Ray r = get_ray(pixel, camera_point);
 
-                LightCube light_cube = scene.light_cubes[cl];
-                    // For severals light_point in the light_cube
-                    for (int l = 0; l < samples; l++)
-                    {
-                        Light light_point = light_cube.new_random_point_light(random, samples);
-                        light_cube_illumination = light_cube_illumination + get_point_light_illumination(light_point, hit_point, normal, scene);
-                    }
-                    illumination = illumination + light_cube_illumination;
+                Sphere s;
+                float f = nearest_intersection(r, scene.spheres, scene.nb_spheres, s);  
 
-                }
+                if(f>0){ // case where the sphere is in the screen
+
+                    Vec3<float> hit_point = r.P + f * r.D;
+                    Vec3<float> normal = normalise(hit_point - s.C);
 
 
+                    // // chrome
+                    // if(s.reflection>0){
+                    //     Ray ray_reflected;
+                    //     ray_reflected.P = hit_point;
+                    //     ray_reflected.D = 2* dot(normal,(r.D*-1)) + r.D;
+                    //     float f_reflected = nearest_intersection(ray_reflected,scene.spheres, scene.nb_spheres, s);
+                    //     Vec3<float> hit_point_reflected =  ray_reflected.P + f_reflected * ray_reflected.D;
+                    //     Vec3<float> normal_reflected = normalise(hit_point_reflected - s.C);
 
-                //Convert to RGB ranges
-                Vec3<float> color = s.color * illumination;
-                //Normalize by clamping to [0;1] domain
-                color.x = clamp(0, 1, color.x);
-                color.y = clamp(0, 1, color.y);
-                color.z = clamp(0, 1, color.z);
-                //Apply the weird shit (gamma correction)
-                color.x = std::pow(color.x, 1/2.2f);
-                color.y = std::pow(color.y, 1/2.2f);
-                color.z = std::pow(color.z, 1/2.2f);
-                //Map to [0;255]
-                color.x = lerp(0, 255, color.x);
-                color.y = lerp(0, 255, color.y);
-                color.z = lerp(0, 255, color.z);
+                    //     r = ray_reflected;
+                    //     f = f_reflected;
+                    //     hit_point = hit_point_reflected;
+                    //     normal = normal_reflected;
+                    // }
+
+                    Vec3<float> camera_point_color = trace_ray(hit_point, normal, s);
+
+                    total_color = total_color + camera_point_color;             
+
+            }
+
+            easyppm_set(&ppm, i, j, easyppm_rgb(total_color.x/camera_samples, total_color.y/camera_samples, total_color.z/camera_samples));
+
+
+
+           
                 //Write to framebuffer
-                easyppm_set(&ppm, i, j, easyppm_rgb(color.x, color.y, color.z));
+
+
             }
         }
     }
@@ -127,7 +170,7 @@ int main(int argc, char* argv[])
     char filename[250];
     Sphere spheres[10];
 
-    sscanf("imgs/scene.ppm","%s", filename);
+    sscanf("imgs/chrome.ppm","%s", filename);
     printf("Writing %s ... ", filename);
 
     // WHITE BACKGROUND
@@ -165,24 +208,31 @@ int main(int argc, char* argv[])
     s5.color={1,1,1};
     scene.spheres[4]=s5;
 
-    // LIGHT BLUE SPHERE
+    // CYAN SPHERE
     Sphere s6;
-    s6.C = {400, 400, 400};
+    s6.C = {450, 400, 400};
     s6.R = 120;
     s6.color={0,1,1};
     scene.spheres[5]=s6;
 
     // BLUE SPHERE
     Sphere s7;
-    s7.C = {150, 250, 350};
+    s7.C = {150, 250, 300};
     s7.R = 80;
     s7.color={0,0.3,1};
     scene.spheres[6]=s7;
 
+    // CHROME SPHERE
+    Sphere s8;
+    s8.C = {200, 500, 500};
+    s8.R = 100;
+    s8.color={1,1,1};
+    s8.reflection=1;
+    scene.spheres[7]=s8;
 
 
 
-    scene.nb_spheres=7;
+    scene.nb_spheres=8;
 
 
 
@@ -201,10 +251,21 @@ int main(int argc, char* argv[])
     l2.position = {300, 100, 300};
     l2.size = 20;
     scene.light_cubes[1] = l2;
-    
-    scene.nb_lights = 2;
 
-    scene.camera = {300,300,-2500};
+    // CYAN LIGHT
+    LightCube l3;
+    l3.color = {0, 0, 1};
+    l3.intensity = light_intensity;
+    l3.position = {100, 100, 300};
+    l3.size = 20;
+    scene.light_cubes[2] = l3;
+    
+    scene.nb_lights = 3;
+
+    CameraCube camera;
+    camera.position = {300,300,-2500};
+    camera.size=10;
+    scene.camera_cube = camera;
 
 
     PPM ppm = easyppm_create(image_width, image_height, IMAGETYPE_PPM);

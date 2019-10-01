@@ -37,7 +37,6 @@ Vec3<T> operator/(const float& scalar, const Vec3<T>& a) {
 	return a / scalar;
 }
 
-
 template<typename T>
 Vec3<T> operator/(const Vec3<T>& a, const Vec3<T>& b) {
 	return Vec3<T>{ a.x / b.x, a.y / b.y, a.z / b.z };
@@ -52,6 +51,11 @@ template<typename T>
 Vec3<T> operator+(const Vec3<T>& a, const Vec3<T>& b) {
 	return Vec3<T>{ a.x + b.x, a.y + b.y, a.z + b.z };
 };
+
+template<typename T>
+Vec3<T> operator+(const float& scalar, const Vec3<T>& a) {
+	return {a.x+scalar, a.y+scalar, a.z+scalar};
+}
 
 template<typename T>
 float norm(const Vec3<T>& v) {

@@ -2,7 +2,7 @@
 
 ### Compilation 
 ```
-$ g++ main.cpp -O4 -o main
+$ g++ main.cpp -O4 -openmp -lpthread -o main && ./main.exe
 
 ```
 

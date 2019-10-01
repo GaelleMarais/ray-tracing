@@ -2,7 +2,8 @@
 
 ### Compilation 
 ```
-$ g++ main.cpp -o main
+$ g++ main.cpp -O4 -o main
+
 ```
 
 ### Execution

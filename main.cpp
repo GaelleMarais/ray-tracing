@@ -3,17 +3,19 @@
 #include <math.h>
 #include "ray.h"
 #include "sphere.h"
-#include "cube.h"
+#include "lightcube.h"
 #include "vec3.h"
 #include "light.h"
+#include "scene.h"
 #include "easyppm.h"
 #include "easyppm.c"
 #include <iostream>
 
 int image_width = 600;
 int image_height = 600;
-int INTENS = 1e5;
+int light_intensity = 1e5;
 int samples = 100;
+Scene scene;
 
 float clamp(float min, float max, float value)
 {
@@ -28,7 +30,7 @@ float lerp(float start, float end, float t)
     return start + t * (end - start);
 }
 
-Vec3<float> get_point_light_illumination(const Light& light, const Vec3<float> hit_point, const Vec3<float>& normal, Sphere spheres[], int nb_spheres)
+Vec3<float> get_point_light_illumination(const Light& light, const Vec3<float> hit_point, const Vec3<float>& normal, Scene scene)
 {
     Vec3<float> color = {0, 0, 0};
     // Compute point light color
@@ -41,7 +43,7 @@ Vec3<float> get_point_light_illumination(const Light& light, const Vec3<float> h
 
     Sphere obstacle;
     // int obs = 0;
-    float f_obstacle = nearest_intersection(sphere_to_light, spheres, nb_spheres, obstacle);
+    float f_obstacle = nearest_intersection(sphere_to_light, scene.spheres, scene.nb_spheres, obstacle);
 
     if (f_obstacle == -1 || f_obstacle >= dist_to_light){
         // sphere is in light
@@ -54,13 +56,9 @@ Vec3<float> get_point_light_illumination(const Light& light, const Vec3<float> h
     return color;
 }
 
-void draw_sphere_ppm(PPM ppm, Sphere s, Sphere spheres[], int nb_spheres){
+void draw_sphere_ppm(PPM ppm, Sphere s, Scene scene){
 
-    CubeLight cube_light;
-    cube_light.color = {1, 1, 1};
-    cube_light.intensity = INTENS;
-    cube_light.position = {300, 600, 300};
-    cube_light.size = 100;
+
 
     #pragma omp parallel for    
     for(int i = 0; i < ppm.width; i++){
@@ -78,19 +76,27 @@ void draw_sphere_ppm(PPM ppm, Sphere s, Sphere spheres[], int nb_spheres){
                 Vec3<float> normal = normalise(hit_point - s.C);
                 Vec3<float> illumination = {0, 0, 0};
                 
-                //Can abstract to multiple cube_lights easily now ! :)
-                Vec3<float> cube_light_illumination = {0, 0, 0};
+                //Can abstract to multiple light_cubes easily now ! :)
+                Vec3<float> light_cube_illumination = {0, 0, 0};
 
                 std::random_device random_device;
                 std::mt19937_64 random(random_device());
 
-                //Surface light illumination computing
-                for (int l = 0; l < samples; l++)
-                {
-                    Light light_point = cube_light.new_random_point_light(random, samples);
-                    cube_light_illumination = cube_light_illumination + get_point_light_illumination(light_point, hit_point, normal, spheres, nb_spheres);
+                // For each cube_light in the scene
+                for(int cl = 0; cl < scene.nb_lights; cl++){
+
+                LightCube light_cube = scene.light_cubes[cl];
+                    // For severals light_point in the light_cube
+                    for (int l = 0; l < samples; l++)
+                    {
+                        Light light_point = light_cube.new_random_point_light(random, samples);
+                        light_cube_illumination = light_cube_illumination + get_point_light_illumination(light_point, hit_point, normal, scene);
+                    }
+                    illumination = illumination + light_cube_illumination;
+
                 }
-                illumination = illumination + cube_light_illumination;
+
+
 
                 //Convert to RGB ranges
                 Vec3<float> color = s.color * illumination;
@@ -120,38 +126,56 @@ int main(int argc, char* argv[])
     char filename[250];
     Sphere spheres[10];
 
-    sscanf("imgs/light.ppm","%s", filename);
+    sscanf("imgs/scene.ppm","%s", filename);
     printf("Writing %s ... ", filename);
 
-    // VERT
+    // WHITE SPHERE
+    Sphere s3;
+    s3.C = {300, 300, 1500};
+    s3.R = 300;
+    s3.color={1,1,1};
+    scene.spheres[0]=s3;
+
+    // GREEN SPHERE
     Sphere s1;
-    s1.C = {150, 250, 600};
+    s1.C = {150, 250, 1000};
     s1.R = 80;
     s1.color={0,1,1};
-    spheres[0]=s1;
+    scene.spheres[1]=s1;
 
-    // JAUNE
+    // YELLOW SPHERE
     Sphere s2;
-    s2.C = {400, 300, 600};
+    s2.C = {400, 300, 1000};
     s2.R = 70;
     s2.color={1,1,0};
-    spheres[1]=s2;
+    scene.spheres[2]=s2;
 
-    // ROUGE
-    Sphere s3;
-    s3.C = {300, 50, 900};
-    s3.R = 300;
-    s3.color={1,0,0};
-    spheres[2]=s3;
+    scene.nb_spheres=3;
 
+    // YELLOW LIGHT
+    LightCube l1;
+    l1.color = {1, 1, 0};
+    l1.intensity = light_intensity;
+    l1.position = {300, 600, 0};
+    l1.size = 100;
+    scene.light_cubes[0] = l1;
 
-    int nb_sphere=3;
+    // RED LIGHT
+    LightCube l2;
+    l2.color = {1, 0, 0};
+    l2.intensity = light_intensity *2;
+    l2.position = {300, 300, 0};
+    l2.size = 50;
+    scene.light_cubes[1] = l2;
+    
+    scene.nb_lights = 2;
+
 
     PPM ppm = easyppm_create(image_width, image_height, IMAGETYPE_PPM);
 
-    draw_sphere_ppm(ppm,s3,spheres,nb_sphere);
-    draw_sphere_ppm(ppm,s2,spheres,nb_sphere);
-    draw_sphere_ppm(ppm,s1,spheres,nb_sphere);
+    for(int i=0; i<scene.nb_spheres; i++){
+        draw_sphere_ppm(ppm, scene.spheres[i], scene);
+    }
 
     easyppm_write(&ppm, filename);
     printf("OK\n");

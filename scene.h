@@ -9,5 +9,7 @@ struct Scene{
     Sphere spheres[10];
     int nb_lights;
     LightCube light_cubes[10];
+    int nb_triangles;
+    Triangle triangles[1000];
     CameraCube camera_cube;
 };

@@ -75,8 +75,16 @@ Vec3<T> normalise(const Vec3<T>& a){
 }
 
 template<typename T>
+Vec3<float> cross(const Vec3<T>& a, const Vec3<T>&b) {
+	return {a.y * b.z - a.z * b.y,
+			a.z * b.x - a.x * b.z,
+			a.x * b.y - a.y * b.x};
+}
+
+template<typename T>
 std::ostream& operator<<(std::ostream& stream, const Vec3<T>& v)
 {
 	stream << "(" << v.x << ", " << v.y << ", " << v.z << ")";
 	return stream;
 }
+

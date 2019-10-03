@@ -3,6 +3,7 @@
 #include <math.h>
 #include "ray.h"
 #include "sphere.h"
+#include "triangle.h"
 #include "lightcube.h"
 #include "vec3.h"
 #include "light.h"
@@ -14,11 +15,9 @@
 
 int image_width = 600;
 int image_height = 600;
-int light_intensity = 5e4;
-int light_samples = 500;
-int camera_samples = 100;
-
-Scene scene;
+float light_intensity = 5e4;
+int light_samples = 100;
+int camera_samples = 10;
 
 float clamp(float min, float max, float value){
     if (value < min) return min;
@@ -34,18 +33,21 @@ Vec3<float> get_point_light_illumination(const Light& light, const Vec3<float> h
     Vec3<float> color = {0, 0, 0};
     // Compute point light color
 
-    Ray sphere_to_light;
-    sphere_to_light.P = hit_point + 0.1f * normal; // move away from surface to avoid dead pixels
-    sphere_to_light.D = normalise(light.position - hit_point);
+    Ray surface_to_light;
+    surface_to_light.P = hit_point + 0.1f * normal; // move away from surface to avoid dead pixels
+    surface_to_light.D = normalise(light.position - hit_point);
 
     float dist_to_light = norm(light.position - hit_point);
 
-    Sphere obstacle;
-    float f_obstacle = nearest_intersection(sphere_to_light, scene.spheres, scene.nb_spheres, obstacle);
+    Sphere obstacle_sphere;
+    float f_obstacle_sphere = nearest_intersection_sphere(surface_to_light, scene.spheres, scene.nb_spheres, obstacle_sphere);
 
-    if (f_obstacle == -1 || f_obstacle >= dist_to_light){
+    Triangle obstacle_triangle;
+    float f_obstacle_triangle = nearest_intersection_triangle(surface_to_light, scene.triangles, scene.nb_triangles, obstacle_triangle);
+
+    if ((f_obstacle_sphere == -1 || f_obstacle_sphere >= dist_to_light) && (f_obstacle_triangle == -1 || f_obstacle_triangle >= dist_to_light)){
         // case where the sphere is in light
-        float angle = dot(sphere_to_light.D, normal);
+        float angle = dot(surface_to_light.D, normal);
         float intensity = light.intensity * angle / (dist_to_light * dist_to_light);
         if (intensity < 0) intensity = 0;
         color = intensity * light.color;
@@ -61,7 +63,7 @@ Ray get_ray(const Vec3<float> pixel, const Vec3<float> camera){
     return ray;
 }
 
-Vec3<float> trace_ray(const Vec3<float> hit_point, Vec3<float> normal, Sphere s){
+Vec3<float> trace_ray(const Vec3<float> hit_point, Vec3<float> normal, Vec3<float> col, Scene scene){
     Vec3<float> illumination = {0, 0, 0};                
     Vec3<float> light_cube_illumination = {0, 0, 0};
 
@@ -82,9 +84,8 @@ Vec3<float> trace_ray(const Vec3<float> hit_point, Vec3<float> normal, Sphere s)
 
     }
 
-
     //Convert to RGB ranges
-    Vec3<float> color = s.color * illumination;
+    Vec3<float> color = col * illumination;
     //Normalize by clamping to [0;1] domain
     color.x = clamp(0, 1, color.x);
     color.y = clamp(0, 1, color.y);
@@ -121,42 +122,35 @@ void draw_scene_ppm(PPM ppm, Scene scene){
                 Ray r = get_ray(pixel, camera_point);
 
                 Sphere s;
-                float f = nearest_intersection(r, scene.spheres, scene.nb_spheres, s);  
+                float f_sphere = nearest_intersection_sphere(r, scene.spheres, scene.nb_spheres, s);  
 
-                if(f>0){ // case where the sphere is in the screen
+                Triangle t;
+                float f_triangle = nearest_intersection_triangle(r, scene.triangles, scene.nb_triangles, t);
 
-                    Vec3<float> hit_point = r.P + f * r.D;
+                if(f_triangle > -1 && f_triangle < f_sphere){ // draw a triangle
+
+                    Vec3<float> hit_point = r.P + f_triangle * r.D;
+                    Vec3<float> normal = normal_triangle(t);
+                    Vec3<float> camera_point_color = trace_ray(hit_point, normal, t.color, scene);
+
+                    total_color = total_color + camera_point_color;
+
+                }else if(f_sphere > -1 ){ // draw a sphere
+
+                    Vec3<float> hit_point = r.P + f_sphere * r.D;
                     Vec3<float> normal = normalise(hit_point - s.C);
+                    Vec3<float> camera_point_color = trace_ray(hit_point, normal, s.color, scene);
+
+                    total_color = total_color + camera_point_color;
+                }
 
 
-                    // // chrome
-                    // if(s.reflection>0){
-                    //     Ray ray_reflected;
-                    //     ray_reflected.P = hit_point;
-                    //     ray_reflected.D = 2* dot(normal,(r.D*-1)) + r.D;
-                    //     float f_reflected = nearest_intersection(ray_reflected,scene.spheres, scene.nb_spheres, s);
-                    //     Vec3<float> hit_point_reflected =  ray_reflected.P + f_reflected * ray_reflected.D;
-                    //     Vec3<float> normal_reflected = normalise(hit_point_reflected - s.C);
-
-                    //     r = ray_reflected;
-                    //     f = f_reflected;
-                    //     hit_point = hit_point_reflected;
-                    //     normal = normal_reflected;
-                    // }
-
-                    Vec3<float> camera_point_color = trace_ray(hit_point, normal, s);
-
-                    total_color = total_color + camera_point_color;             
-
-            }
-
-            easyppm_set(&ppm, i, j, easyppm_rgb(total_color.x/camera_samples, total_color.y/camera_samples, total_color.z/camera_samples));
-
-
-
-           
-                //Write to framebuffer
-
+            ppmcolor color = easyppm_rgb(
+                    (char) (total_color.x/ (float) camera_samples),
+                    (char) (total_color.y/ (float) camera_samples),
+                    (char) (total_color.z/ (float) camera_samples)
+                    );
+            easyppm_set(&ppm, i, j, color);
 
             }
         }
@@ -165,13 +159,14 @@ void draw_scene_ppm(PPM ppm, Scene scene){
 
 
 
-int main(int argc, char* argv[])
+int main()
 {
     char filename[250];
-    Sphere spheres[10];
 
-    sscanf("imgs/chrome.ppm","%s", filename);
+    sscanf("imgs/mesh.ppm","%s", filename);
     printf("Writing %s ... ", filename);
+
+    Scene scene;
 
     // WHITE BACKGROUND
     Sphere s1;
@@ -219,20 +214,34 @@ int main(int argc, char* argv[])
     Sphere s7;
     s7.C = {150, 250, 300};
     s7.R = 80;
-    s7.color={0,0.3,1};
+    s7.color={0,0.3f,1};
     scene.spheres[6]=s7;
 
-    // CHROME SPHERE
+    // WHITE SPHERE
     Sphere s8;
     s8.C = {200, 500, 500};
     s8.R = 100;
     s8.color={1,1,1};
-    s8.reflection=1;
     scene.spheres[7]=s8;
+
+    Triangle t1;
+    t1.a = { 100, 100, 300};
+    t1.b = { 100, 50, 100};
+    t1.c = { 200, 50, 200};
+    t1.color = {1, 0, 0};
+    scene.triangles[0] = t1;
+
+    Triangle t2;
+    t2.a = { 500, 150, 50};
+    t2.b = { 450, 50, 100};
+    t2.c = { 400, 100, 200};
+    t2.color = {1, 0, 0};
+    scene.triangles[1] = t2;
 
 
 
     scene.nb_spheres=8;
+    scene.nb_triangles=2;
 
 
 
@@ -248,7 +257,7 @@ int main(int argc, char* argv[])
     LightCube l2;
     l2.color = {1, 1, 1};
     l2.intensity = light_intensity;
-    l2.position = {300, 100, 300};
+    l2.position = {300, 50, 300};
     l2.size = 20;
     scene.light_cubes[1] = l2;
 

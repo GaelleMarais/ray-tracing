@@ -11,13 +11,14 @@
 #include "camera.h"
 #include "easyppm.h"
 #include "easyppm.c"
+#include "parser.h"
 #include <iostream>
 
 int image_width = 600;
 int image_height = 600;
 float light_intensity = 5e4;
-int light_samples = 100;
-int camera_samples = 10;
+int light_samples = 1;
+int camera_samples = 1;
 
 float clamp(float min, float max, float value){
     if (value < min) return min;
@@ -224,24 +225,27 @@ int main()
     s8.color={1,1,1};
     scene.spheres[7]=s8;
 
-    Triangle t1;
-    t1.a = { 100, 100, 300};
-    t1.b = { 100, 50, 100};
-    t1.c = { 200, 50, 200};
-    t1.color = {1, 0, 0};
-    scene.triangles[0] = t1;
-
-    Triangle t2;
-    t2.a = { 500, 150, 50};
-    t2.b = { 450, 50, 100};
-    t2.c = { 400, 100, 200};
-    t2.color = {1, 0, 0};
-    scene.triangles[1] = t2;
-
-
-
     scene.nb_spheres=8;
-    scene.nb_triangles=2;
+
+
+    // Triangle t1;
+    // t1.a = { 100, 100, 300};
+    // t1.b = { 100, 50, 100};
+    // t1.c = { 200, 50, 200};
+    // t1.color = {1, 0, 0};
+    // scene.triangles[0] = t1;
+
+    // Triangle t2;
+    // t2.a = { 500, 150, 50};
+    // t2.b = { 450, 50, 100};
+    // t2.c = { 400, 100, 200};
+    // t2.color = {1, 0, 0};
+    // scene.triangles[1] = t2;
+
+    // scene.nb_triangles=2;
+
+
+
 
 
 
@@ -273,11 +277,14 @@ int main()
 
     CameraCube camera;
     camera.position = {300,300,-2500};
-    camera.size=10;
+    camera.size=1;
     scene.camera_cube = camera;
 
 
     PPM ppm = easyppm_create(image_width, image_height, IMAGETYPE_PPM);
+    read_file("./off/cone.off", 200);
+
+    scene.nb_triangles = 40;
 
     draw_scene_ppm(ppm, scene);
 
@@ -285,5 +292,4 @@ int main()
     printf("OK\n");
 
     return 0;
-
 }

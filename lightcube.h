@@ -17,9 +17,9 @@ struct LightCube{
 
         float delta = size/2;
         std::uniform_real_distribution<> dist(-delta, +delta);
-        light.position.x = dist(random);
-        light.position.y = dist(random);
-        light.position.z = dist(random);
+        light.position.x = (float) dist(random);
+        light.position.y = (float) dist(random);
+        light.position.z = (float) dist(random);
         light.position = light.position + position;
 
         return light;

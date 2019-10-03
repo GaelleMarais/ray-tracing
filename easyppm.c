@@ -66,18 +66,12 @@ void easyppm_set(PPM* ppm, int x, int y, ppmcolor c) {
     if (ppm->itype == IMAGETYPE_PBM || ppm->itype == IMAGETYPE_PGM) {
         ppm->image[i] = c.r;
     } else {
-        if(c.r>255)
-            ppm->image[EASYPPM_NUM_CHANNELS*i + 0] = 255;
-        else
-            ppm->image[EASYPPM_NUM_CHANNELS*i + 0] = c.r;
-        if(c.g>255)
-            ppm->image[EASYPPM_NUM_CHANNELS*i + 1] = 255;
-        else
-            ppm->image[EASYPPM_NUM_CHANNELS*i + 1] = c.g;
-        if(c.b>255)
-            ppm->image[EASYPPM_NUM_CHANNELS*i + 2] = 255;
-        else
-            ppm->image[EASYPPM_NUM_CHANNELS*i + 2] = c.b;
+
+        ppm->image[EASYPPM_NUM_CHANNELS*i + 0] = c.r;
+
+        ppm->image[EASYPPM_NUM_CHANNELS*i + 1] = c.g;
+
+        ppm->image[EASYPPM_NUM_CHANNELS*i + 2] = c.b;
     }
 }
 
@@ -142,9 +136,9 @@ ppmcolor easyppm_black_white(int bw) {
 
     bw = (bw == 0 ? 255 : 0);
 
-    c.r = bw;
-    c.g = bw;
-    c.b = bw;
+    c.r = (char) bw;
+    c.g = (char) bw;
+    c.b = (char) bw;
 
     return c;
 }
@@ -169,7 +163,7 @@ void easyppm_gamma_correct(PPM* ppm, float gamma) {
             g = (PPMBYTE)(powf(c.g / (float)EASYPPM_MAX_CHANNEL_VALUE, exp) * 255);
             b = (PPMBYTE)(powf(c.b / (float)EASYPPM_MAX_CHANNEL_VALUE, exp) * 255);
 
-            easyppm_set(ppm, x, y, easyppm_rgb(r, g, b));
+            easyppm_set(ppm, x, y, easyppm_rgb( (char) r, (char) g, (char) b));
         }
     }
 }
@@ -246,19 +240,19 @@ void easyppm_read(PPM* ppm, const char* path) {
             if (ppm->itype == IMAGETYPE_PBM) {
                 dummy = fscanf(fp, "%d\n", &gr);
                 gr = (gr == 0 ? 1 : 0);
-                c.r = gr;
-                c.g = gr;
-                c.b = gr;
+                c.r = (char) gr;
+                c.g = (char) gr;
+                c.b = (char) gr;
             } else if (ppm->itype == IMAGETYPE_PGM) {
                 dummy = fscanf(fp, "%d\n", &gr);
-                c.r = gr;
-                c.g = gr;
-                c.b = gr;
+                c.r = (char) gr;
+                c.g = (char) gr;
+                c.b = (char) gr;
             } else {
                 dummy = fscanf(fp, "%d %d %d\n", &r, &g, &b);
-                c.r = r;
-                c.g = g;
-                c.b = b;
+                c.r = (char) r;
+                c.g = (char) g;
+                c.b = (char) b;
             }
             easyppm_set(ppm, x, y, c);
         }

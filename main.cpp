@@ -204,28 +204,28 @@ int main()
     s5.color={1,1,1};
     scene.spheres[4]=s5;
 
-    // CYAN SPHERE
-    Sphere s6;
-    s6.C = {450, 400, 400};
-    s6.R = 120;
-    s6.color={0,1,1};
-    scene.spheres[5]=s6;
+    // // CYAN SPHERE
+    // Sphere s6;
+    // s6.C = {450, 400, 400};
+    // s6.R = 120;
+    // s6.color={0,1,1};
+    // scene.spheres[5]=s6;
 
-    // BLUE SPHERE
-    Sphere s7;
-    s7.C = {150, 250, 300};
-    s7.R = 80;
-    s7.color={0,0.3f,1};
-    scene.spheres[6]=s7;
+    // // BLUE SPHERE
+    // Sphere s7;
+    // s7.C = {150, 250, 300};
+    // s7.R = 80;
+    // s7.color={0,0.3f,1};
+    // scene.spheres[6]=s7;
 
-    // WHITE SPHERE
-    Sphere s8;
-    s8.C = {200, 500, 500};
-    s8.R = 100;
-    s8.color={1,1,1};
-    scene.spheres[7]=s8;
+    // // WHITE SPHERE
+    // Sphere s8;
+    // s8.C = {200, 500, 500};
+    // s8.R = 100;
+    // s8.color={1,1,1};
+    // scene.spheres[7]=s8;
 
-    scene.nb_spheres=8;
+    scene.nb_spheres=5;
 
 
     // Triangle t1;
@@ -243,10 +243,6 @@ int main()
     // scene.triangles[1] = t2;
 
     // scene.nb_triangles=2;
-
-
-
-
 
 
     // YELLOW LIGHT
@@ -282,9 +278,20 @@ int main()
 
 
     PPM ppm = easyppm_create(image_width, image_height, IMAGETYPE_PPM);
-    read_file("./off/cone.off", 200);
+    scene.nb_triangles = 12;
+    Triangle tr[scene.nb_triangles];
+    Vec3<float> pos = { 400,100,500};
+    read_file("./off/cube.off", 100, pos, tr);
 
-    scene.nb_triangles = 40;
+    for(int i = 0; i < scene.nb_triangles; i++){
+        scene.triangles[i] = tr[i];
+    }
+
+    // DEBUG
+    // for (int i = 0; i < scene.nb_triangles; i++){
+    //     std::cout << tr[i] << std::endl;
+    // }
+
 
     draw_scene_ppm(ppm, scene);
 

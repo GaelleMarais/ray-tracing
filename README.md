@@ -1,4 +1,4 @@
-# 3d-images
+# 3d-ray-tracing
 
 ### Compilation 
 ```

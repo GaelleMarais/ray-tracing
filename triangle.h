@@ -58,3 +58,9 @@ Vec3<float> normal_triangle(Triangle t){
 
     return normalise(cross(edge1, edge2));    
 }
+
+std::ostream& operator<<(std::ostream& stream, Triangle &t)
+{
+	stream << "A: " << t.a << "     B: " << t.b << "    C: " << t.c ;
+	return stream;
+}

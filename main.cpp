@@ -110,7 +110,7 @@ void draw_scene_ppm(PPM ppm, Scene scene){
     for(int i = 0; i < ppm.width; i++){
         for(int j = 0; j < ppm.height; j++){
 
-            Vec3<float> pixel = {(float)i, (float)j, 0};
+            Vec3<float> pixel = {(float)i, 0, (float)j};
 
             Vec3<float> total_color = {0, 0, 0};
 
@@ -170,46 +170,46 @@ int main()
     Scene scene;
 
     // WHITE BACKGROUND
-    Sphere s1;
-    s1.C = {300, 300, 20600};
-    s1.R = 20000;
-    s1.color={1,1,1};
-    scene.spheres[0]=s1;
+    // Sphere s1;
+    // s1.C = {300, 300, 20600};
+    // s1.R = 20000;
+    // s1.color={1,1,1};
+    // scene.spheres[0]=s1;
 
     // WHITE CEILING
-    Sphere s2;
-    s2.C = {300, -20000, 300};
-    s2.R = 20000;
-    s2.color={1,1,1};
-    scene.spheres[1]=s2;
+    // Sphere s2;
+    // s2.C = {300, -20000, 300};
+    // s2.R = 20000;
+    // s2.color={1,1,1};
+    // scene.spheres[1]=s2;
 
     // WHITE FLOOR
     Sphere s3;
     s3.C = {300, 20600, 300};
     s3.R = 20000;
     s3.color={1,1,1};
-    scene.spheres[2]=s3;
+    scene.spheres[0]=s3;
 
     // WHITE LEFT WALL
-    Sphere s4;
-    s4.C = {-20000, 300, 300};
-    s4.R = 20000;
-    s4.color={1,1,1};
-    scene.spheres[3]=s4;
+    // Sphere s4;
+    // s4.C = {-20000, 300, 300};
+    // s4.R = 20000;
+    // s4.color={1,1,1};
+    // scene.spheres[3]=s4;
 
     // WHITE RIGHT WALL
-    Sphere s5;
-    s5.C = {20600, 300, 300};
-    s5.R = 20000;
-    s5.color={1,1,1};
-    scene.spheres[4]=s5;
+    // Sphere s5;
+    // s5.C = {20600, 300, 300};
+    // s5.R = 20000;
+    // s5.color={1,1,1};
+    // scene.spheres[4]=s5;
 
-    // // CYAN SPHERE
-    // Sphere s6;
-    // s6.C = {450, 400, 400};
-    // s6.R = 120;
-    // s6.color={0,1,1};
-    // scene.spheres[5]=s6;
+    // ORANGE SPHERE
+    Sphere s6;
+    s6.C = {300, 500, 000};
+    s6.R = 170;
+    s6.color={1.0f, 0.5f, 0.2f};
+    scene.spheres[1]=s6;
 
     // // BLUE SPHERE
     // Sphere s7;
@@ -225,7 +225,7 @@ int main()
     // s8.color={1,1,1};
     // scene.spheres[7]=s8;
 
-    scene.nb_spheres=5;
+    scene.nb_spheres=2;
 
 
     // Triangle t1;
@@ -249,7 +249,7 @@ int main()
     LightCube l1;
     l1.color = {1, 1, 0};
     l1.intensity = light_intensity;
-    l1.position = {300, 600, 300};
+    l1.position = {300, 000, 300};
     l1.size = 300;
     scene.light_cubes[0] = l1;
 
@@ -257,7 +257,7 @@ int main()
     LightCube l2;
     l2.color = {1, 1, 1};
     l2.intensity = light_intensity;
-    l2.position = {300, 50, 300};
+    l2.position = {000, 000, 300};
     l2.size = 20;
     scene.light_cubes[1] = l2;
 
@@ -265,23 +265,23 @@ int main()
     LightCube l3;
     l3.color = {0, 0, 1};
     l3.intensity = light_intensity;
-    l3.position = {100, 100, 300};
+    l3.position = {100, 000, 000};
     l3.size = 20;
     scene.light_cubes[2] = l3;
     
     scene.nb_lights = 3;
 
     CameraCube camera;
-    camera.position = {300,300,-2500};
+    camera.position = {300,-1500,300};
     camera.size=1;
     scene.camera_cube = camera;
 
 
     PPM ppm = easyppm_create(image_width, image_height, IMAGETYPE_PPM);
-    scene.nb_triangles = 12;
+    scene.nb_triangles = 616;
     Triangle tr[scene.nb_triangles];
-    Vec3<float> pos = { 400,100,500};
-    read_file("./off/cube.off", 100, pos, tr);
+    Vec3<float> pos = { 300,500,170};
+    read_file("./off/r2.off", 0.3f, pos, tr);
 
     for(int i = 0; i < scene.nb_triangles; i++){
         scene.triangles[i] = tr[i];

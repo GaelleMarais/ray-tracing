@@ -208,15 +208,15 @@ int main()
     Sphere s6;
     s6.C = {300, 500, 000};
     s6.R = 170;
-    s6.color={1.0f, 0.5f, 0.2f};
+    s6.color={1.0f, 0.3f, 0.1f};
     scene.spheres[1]=s6;
 
     // // BLUE SPHERE
-    // Sphere s7;
-    // s7.C = {150, 250, 300};
-    // s7.R = 80;
-    // s7.color={0,0.3f,1};
-    // scene.spheres[6]=s7;
+    Sphere s7;
+    s7.C = {100, 200, 200};
+    s7.R = 80;
+    s7.color={0,0.3f,1};
+    scene.spheres[2]=s7;
 
     // // WHITE SPHERE
     // Sphere s8;
@@ -225,7 +225,7 @@ int main()
     // s8.color={1,1,1};
     // scene.spheres[7]=s8;
 
-    scene.nb_spheres=2;
+    scene.nb_spheres=3;
 
 
     // Triangle t1;
@@ -249,7 +249,7 @@ int main()
     LightCube l1;
     l1.color = {1, 1, 0};
     l1.intensity = light_intensity;
-    l1.position = {300, 000, 300};
+    l1.position = {200, 100, 400};
     l1.size = 300;
     scene.light_cubes[0] = l1;
 
@@ -257,7 +257,7 @@ int main()
     LightCube l2;
     l2.color = {1, 1, 1};
     l2.intensity = light_intensity;
-    l2.position = {000, 000, 300};
+    l2.position = {000, 100, 000};
     l2.size = 20;
     scene.light_cubes[1] = l2;
 
@@ -265,7 +265,7 @@ int main()
     LightCube l3;
     l3.color = {0, 0, 1};
     l3.intensity = light_intensity;
-    l3.position = {100, 000, 000};
+    l3.position = {000, 300, 600};
     l3.size = 20;
     scene.light_cubes[2] = l3;
     

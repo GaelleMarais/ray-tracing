@@ -9,7 +9,7 @@
 
 using namespace std;
 
-void read_file(string filename, int size,Vec3<float> pos, Triangle triangles[]){
+void read_file(string filename, float size,Vec3<float> pos, Triangle triangles[]){
 
   string buff;
   ifstream file (filename);
@@ -59,7 +59,7 @@ void read_file(string filename, int size,Vec3<float> pos, Triangle triangles[]){
       getline(file, buff, delim_endline);
       triangle.c = vertices[stoi(buff)];
 
-      triangle.color = {1, 0, 0};
+      triangle.color = {0, 1, 1};
 
       triangles[j] = triangle;
 

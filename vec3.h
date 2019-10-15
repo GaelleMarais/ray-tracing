@@ -48,6 +48,12 @@ Vec3<T> operator-(const Vec3<T>& a, const Vec3<T>& b) {
 };
 
 template<typename T>
+Vec3<T> operator-(const Vec3<T>& a, const float& scalar) {
+	return Vec3<T>{ a.x - scalar, a.y - scalar, a.z - scalar };
+};
+
+
+template<typename T>
 Vec3<T> operator+(const Vec3<T>& a, const Vec3<T>& b) {
 	return Vec3<T>{ a.x + b.x, a.y + b.y, a.z + b.z };
 };

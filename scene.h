@@ -10,6 +10,6 @@ struct Scene{
     int nb_lights;
     LightCube light_cubes[10];
     int nb_triangles;
-    Triangle triangles[1000];
+    Triangle triangles[10000];
     CameraCube camera_cube;
 };

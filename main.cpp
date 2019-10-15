@@ -11,6 +11,7 @@
 #include "camera.h"
 #include "easyppm.h"
 #include "easyppm.c"
+#include "box.h"
 #include "parser.h"
 #include <iostream>
 
@@ -30,7 +31,7 @@ float lerp(float start, float end, float t){
     return start + t * (end - start);
 }
 
-Vec3<float> get_point_light_illumination(const Light& light, const Vec3<float> hit_point, const Vec3<float>& normal, Scene scene){
+Vec3<float> get_point_light_illumination(const Light& light, const Vec3<float>& hit_point, const Vec3<float>& normal, Scene& scene){
     Vec3<float> color = {0, 0, 0};
     // Compute point light color
 
@@ -57,14 +58,14 @@ Vec3<float> get_point_light_illumination(const Light& light, const Vec3<float> h
     return color;
 }
 
-Ray get_ray(const Vec3<float> pixel, const Vec3<float> camera){
+Ray get_ray(const Vec3<float>& pixel, const Vec3<float>& camera){
     Ray ray;
     ray.P = camera;
     ray.D = normalise(pixel - camera);
     return ray;
 }
 
-Vec3<float> trace_ray(const Vec3<float> hit_point, Vec3<float> normal, Vec3<float> col, Scene scene){
+Vec3<float> trace_ray(const Vec3<float>& hit_point, Vec3<float>& normal, Vec3<float>& col, Scene& scene){
     Vec3<float> illumination = {0, 0, 0};                
     Vec3<float> light_cube_illumination = {0, 0, 0};
 
@@ -91,7 +92,7 @@ Vec3<float> trace_ray(const Vec3<float> hit_point, Vec3<float> normal, Vec3<floa
     color.x = clamp(0, 1, color.x);
     color.y = clamp(0, 1, color.y);
     color.z = clamp(0, 1, color.z);
-    //Apply the weird shit (gamma correction)
+    //Apply gamma correction
     color.x = std::pow(color.x, 1/2.2f);
     color.y = std::pow(color.y, 1/2.2f);
     color.z = std::pow(color.z, 1/2.2f);
@@ -104,7 +105,25 @@ Vec3<float> trace_ray(const Vec3<float> hit_point, Vec3<float> normal, Vec3<floa
 
 }
 
-void draw_scene_ppm(PPM ppm, Scene scene){
+void draw_triangle(Ray& r, float dist_surface, Triangle& t, Scene& scene, Vec3<float>& total_color){
+    Vec3<float> hit_point = r.P + dist_surface * r.D;
+    Vec3<float> normal = normal_triangle(t);
+    Vec3<float> camera_point_color = trace_ray(hit_point, normal, t.color, scene);
+
+    total_color = total_color + camera_point_color;
+}
+
+void draw_sphere(Ray& r, float dist_surface, Sphere& s, Scene& scene, Vec3<float>& total_color){
+    Vec3<float> hit_point = r.P + dist_surface * r.D;
+    Vec3<float> normal = normalise(hit_point - s.C);
+    Vec3<float> camera_point_color = trace_ray(hit_point, normal, s.color, scene);
+
+    total_color = total_color + camera_point_color;
+}
+
+void draw_scene_ppm(PPM ppm, Scene& scene){
+
+    Box root;
 
     #pragma omp parallel for    
     for(int i = 0; i < ppm.width; i++){
@@ -123,34 +142,23 @@ void draw_scene_ppm(PPM ppm, Scene scene){
                 Ray r = get_ray(pixel, camera_point);
 
                 Sphere s;
-                float f_sphere = nearest_intersection_sphere(r, scene.spheres, scene.nb_spheres, s);  
+                float f_sphere = nearest_intersection_sphere(r, scene.spheres, scene.nb_spheres, s); 
 
                 Triangle t;
                 float f_triangle = nearest_intersection_triangle(r, scene.triangles, scene.nb_triangles, t);
 
-                if(f_triangle > -1 && f_triangle < f_sphere){ // draw a triangle
+                if(f_triangle > -1 && f_triangle < f_sphere)
+                    draw_triangle(r, f_triangle, t, scene, total_color);
 
-                    Vec3<float> hit_point = r.P + f_triangle * r.D;
-                    Vec3<float> normal = normal_triangle(t);
-                    Vec3<float> camera_point_color = trace_ray(hit_point, normal, t.color, scene);
-
-                    total_color = total_color + camera_point_color;
-
-                }else if(f_sphere > -1 ){ // draw a sphere
-
-                    Vec3<float> hit_point = r.P + f_sphere * r.D;
-                    Vec3<float> normal = normalise(hit_point - s.C);
-                    Vec3<float> camera_point_color = trace_ray(hit_point, normal, s.color, scene);
-
-                    total_color = total_color + camera_point_color;
-                }
+                else if(f_sphere > -1 )
+                    draw_sphere(r, f_sphere, s, scene, total_color);
 
 
             ppmcolor color = easyppm_rgb(
-                    (char) (total_color.x/ (float) camera_samples),
-                    (char) (total_color.y/ (float) camera_samples),
-                    (char) (total_color.z/ (float) camera_samples)
-                    );
+                (char) (total_color.x/ (float) camera_samples),
+                (char) (total_color.y/ (float) camera_samples),
+                (char) (total_color.z/ (float) camera_samples)
+                );
             easyppm_set(&ppm, i, j, color);
 
             }
@@ -164,24 +172,10 @@ int main()
 {
     char filename[250];
 
-    sscanf("imgs/mesh.ppm","%s", filename);
+    sscanf("imgs/mesh3.ppm","%s", filename);
     printf("Writing %s ... ", filename);
 
     Scene scene;
-
-    // WHITE BACKGROUND
-    // Sphere s1;
-    // s1.C = {300, 300, 20600};
-    // s1.R = 20000;
-    // s1.color={1,1,1};
-    // scene.spheres[0]=s1;
-
-    // WHITE CEILING
-    // Sphere s2;
-    // s2.C = {300, -20000, 300};
-    // s2.R = 20000;
-    // s2.color={1,1,1};
-    // scene.spheres[1]=s2;
 
     // WHITE FLOOR
     Sphere s3;
@@ -189,20 +183,6 @@ int main()
     s3.R = 20000;
     s3.color={1,1,1};
     scene.spheres[0]=s3;
-
-    // WHITE LEFT WALL
-    // Sphere s4;
-    // s4.C = {-20000, 300, 300};
-    // s4.R = 20000;
-    // s4.color={1,1,1};
-    // scene.spheres[3]=s4;
-
-    // WHITE RIGHT WALL
-    // Sphere s5;
-    // s5.C = {20600, 300, 300};
-    // s5.R = 20000;
-    // s5.color={1,1,1};
-    // scene.spheres[4]=s5;
 
     // ORANGE SPHERE
     Sphere s6;
@@ -218,39 +198,14 @@ int main()
     s7.color={0,0.3f,1};
     scene.spheres[2]=s7;
 
-    // // WHITE SPHERE
-    // Sphere s8;
-    // s8.C = {200, 500, 500};
-    // s8.R = 100;
-    // s8.color={1,1,1};
-    // scene.spheres[7]=s8;
-
     scene.nb_spheres=3;
-
-
-    // Triangle t1;
-    // t1.a = { 100, 100, 300};
-    // t1.b = { 100, 50, 100};
-    // t1.c = { 200, 50, 200};
-    // t1.color = {1, 0, 0};
-    // scene.triangles[0] = t1;
-
-    // Triangle t2;
-    // t2.a = { 500, 150, 50};
-    // t2.b = { 450, 50, 100};
-    // t2.c = { 400, 100, 200};
-    // t2.color = {1, 0, 0};
-    // scene.triangles[1] = t2;
-
-    // scene.nb_triangles=2;
-
 
     // YELLOW LIGHT
     LightCube l1;
     l1.color = {1, 1, 0};
     l1.intensity = light_intensity;
     l1.position = {200, 100, 400};
-    l1.size = 300;
+    l1.size = 30;
     scene.light_cubes[0] = l1;
 
     // WHITE LIGHT

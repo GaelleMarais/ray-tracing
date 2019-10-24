@@ -9,18 +9,17 @@ struct LightCube{
     float intensity;
     Vec3<float> color;
 
-    Light new_random_point_light(std::mt19937_64& random, int sample_count)
+    Light new_random_point_light(int sample_count)
     {
         Light light;
         light.intensity = intensity / (float) sample_count;
         light.color = color;
 
-        float delta = size/2;
-        std::uniform_real_distribution<> dist(-delta, +delta);
-        light.position.x = (float) dist(random);
-        light.position.y = (float) dist(random);
-        light.position.z = (float) dist(random);
-        light.position = light.position + position;
+        Vec3<float> point;
+        point.x = position.x + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(size)));
+        point.y = position.y + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(size)));
+        point.z = position.z + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(size)));
+        light.position = point;
 
         return light;
     }

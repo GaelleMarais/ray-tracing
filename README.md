@@ -7,7 +7,8 @@
 
 ## Introduction
 I followed the [Ray Tracing in One Week](https://raytracing.github.io/) book series to create this small ray-tracing engine. The engine can display spheres or meshes with triangles and light of different colors. 
-
+ 
+I used the [easyppm](https://github.com/fmenozzi/easyppm) library to creates the output images. 
 ## How to use 
 ### Compilation 
 ```
